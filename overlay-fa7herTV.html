@@ -121,6 +121,18 @@
   body:not(.obs) .cam.ao-vivo .previa { display: none; }
   .cam .previa { text-align: center; padding: 0 12px; font-size: 16px; }
 
+  /* ===== Overlay simples: só a câmera pequena no canto, o resto é o jogo ===== */
+  body.simples .marca, body.simples .viewers, body.simples .top-doadores, body.simples .musica-live,
+  body.simples .redes, body.simples .alerta-presente,
+  body.simples .cam .moldura, body.simples .cam .f7, body.simples .cam .faixa { display: none !important; }
+  body.simples .cam { overflow: hidden; border-radius: 10px; box-shadow: 0 4px 18px rgba(0,0,0,.55); }
+  body.simples:not(.vertical) .cam,
+  body.simples:not(.vertical).cam-be .cam, body.simples:not(.vertical).cam-cd .cam, body.simples:not(.vertical).cam-ce .cam {
+    width: 256px; height: 144px; top: auto; bottom: 24px; left: auto; right: 24px;
+  }
+  body.simples:not(.vertical).cam-be .cam, body.simples:not(.vertical).cam-ce .cam { right: auto; left: 24px; }
+  body.simples:not(.vertical).cam-cd .cam, body.simples:not(.vertical).cam-ce .cam { bottom: auto; top: 24px; }
+
   /* ===== Painel de controle (barra lateral; some no OBS) ===== */
   .aba, .chat { display: none; }
   /* ===== Música ===== */
@@ -639,6 +651,10 @@
           </select>
         </div>
       </div>
+      <button id="btn-simples" class="alternar" type="button" aria-pressed="false">
+        <span class="alternar-texto">Overlay simples</span><span class="alternar-estado">desligado</span>
+      </button>
+      <p class="nota">Só a câmera pequena no canto, sem moldura, logo, faixa do jogo, viewers, top presentes nem alertas. A tela de abertura continua funcionando.</p>
       <button id="btn-inicio" class="alternar inicio-botao" type="button" aria-pressed="false">
         <span class="alternar-texto">A live já vai começar</span><span class="alternar-estado">desligado</span>
       </button>
@@ -1218,7 +1234,7 @@
       ? { app: 'fa7herTV', de: eu, pedido: extra.pedido }
       : { app: 'fa7herTV', de: eu, jogo: faixa.textContent, cam: campoCam.value, webcam: webcam, fx: fx, escuro: escuro, frase: frase,
           viewers: viewersTotal, viewersPlats: viewersLista, verViewers: verViewers,
-          top: topOrdenado(), alertas: alertasOn, verTop: verTopOn, musica: musicaAtual, verMusica: verMusica, verRedes: verRedes,
+          top: topOrdenado(), alertas: alertasOn, verTop: verTopOn, musica: musicaAtual, verMusica: verMusica, verRedes: verRedes, simples: simples,
           inicio: inicioOn, inicioFim: inicioFim, inicioTotal: inicioTotal };
     pedir('BroadcastCustomEvent', { eventData: dados }).catch(function () {});
   }
@@ -1245,6 +1261,7 @@
     if (noObs && Array.isArray(e.top)) mostrarTop(e.top);
     if (typeof e.verMusica === 'boolean') aplicarVerMusica(e.verMusica);
     if (typeof e.verRedes === 'boolean') aplicarVerRedes(e.verRedes);
+    if (typeof e.simples === 'boolean' && !q.has('simples')) aplicarSimples(e.simples);
     if (noObs && 'musica' in e) mostrarMusicaLive(e.musica);
     if (e.pedido === 'video') { if (!noObs) oferecer(e.de).catch(function (err) { console.warn('WebRTC', err); }); return; }
     if (e.pedido === 'parar-video') {           // a fonte saiu do ar: para de codificar vídeo para ela
@@ -1561,6 +1578,16 @@
     btnRedes.querySelector('.alternar-estado').textContent = on ? 'ligado' : 'desligado';
   }
   btnRedes.addEventListener('click', function () { aplicarVerRedes(!verRedes); avisar(true); enviar(); });
+  // Overlay simples (só a câmera no canto). ?simples=1 ou ?simples=0 na URL da fonte fixa o modo.
+  var simples = false, btnSimples = document.getElementById('btn-simples');
+  function aplicarSimples(on) {
+    simples = !!on; if (!q.has('simples')) gravar('simples', on ? '1' : '0');
+    document.body.classList.toggle('simples', simples);
+    btnSimples.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btnSimples.querySelector('.alternar-estado').textContent = on ? 'ligado' : 'desligado';
+  }
+  btnSimples.addEventListener('click', function () { aplicarSimples(!simples); avisar(true); enviar(); });
+  aplicarSimples(q.has('simples') ? q.get('simples') !== '0' : ler('simples') === '1');
   aplicarVerRedes(ler('ver-redes') !== '0');
   mostrarMusicaLive(null);
   btnMusicaLive.addEventListener('click', function () { aplicarVerMusica(!verMusica); avisar(true); enviar(); });
